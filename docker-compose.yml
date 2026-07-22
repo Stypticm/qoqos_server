@@ -1,0 +1,127 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: qoqos_postgres
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-qoqos}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: qoqos_redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: qoqos_n8n
+    restart: unless-stopped
+    ports:
+      - '5678:5678'
+    env_file: .env
+    environment:
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=${DB_NAME:-qoqos}
+      - DB_POSTGRESDB_USER=${DB_USER:-postgres}
+      - DB_POSTGRESDB_PASSWORD=${DB_PASSWORD:-postgres}
+      - QUEUE_BULL_REDIS_HOST=redis
+      - QUEUE_BULL_REDIS_PORT=6379
+      - N8N_HOST=${N8N_HOST}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - WEBHOOK_URL=${WEBHOOK_URL}
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+      - N8N_COMMUNITY_PACKAGES_ENABLED=true
+    volumes:
+      - ./n8n_data:/home/node/.n8n
+      - ./storage:/home/node/storage
+      - ./QOQOS_KNOWLEDGE:/home/node/.n8n-files
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  api:
+    build:
+      context: ./api-service
+      dockerfile: Dockerfile.dev
+    container_name: qoqos_api
+    restart: unless-stopped
+    ports:
+      - '8080:8080'
+    env_file: .env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_NAME: ${DB_NAME:-qoqos}
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: 8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./api-service:/app
+      - ./storage:/app/storage
+
+  nginx:
+    image: nginx:alpine
+    container_name: qoqos_nginx
+    restart: unless-stopped
+    ports:
+      - '8088:80'
+      - '443:443'
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      - api
+      - n8n
+
+  qdrant:
+    image: qdrant/qdrant
+    container_name: qoqos_qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - ./qdrant_storage:/qdrant/storage
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: qoqos_ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./ollama_models:/root/.ollama
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Environment Variables
+.env
+.env.*
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Databases, Local Storage and Dumps
+n8n_data/
+qdrant_storage/
+ollama_models/
+storage/
+db_data.json
+dump*.sql
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Editor
+.vscode/
+.idea/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Misc Context
+context.md
