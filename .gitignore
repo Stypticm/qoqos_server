@@ -34,3 +34,7 @@ Thumbs.db
 
 # Misc Context
 context.md
+
+# Agent Rules
+RULES/
+AGENTS.md

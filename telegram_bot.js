@@ -41,6 +41,31 @@ bot.on('text', async (ctx) => {
   const chatId = ctx.chat.id;
   const state = userStates.get(chatId);
 
+  // 0. Обработка Reply-сообщений для чата на сайте
+  if (ctx.message.reply_to_message) {
+    const originalText = ctx.message.reply_to_message.text;
+    if (originalText && originalText.includes('Новый вопрос в чате от пользователя')) {
+      const match = originalText.match(/от пользователя (guest_[a-zA-Z0-9]+)/);
+      if (match && match[1]) {
+        const guestId = match[1];
+        const client = await getDbClient();
+        try {
+          // Создадим табличку, если ее еще нет
+          await client.query('CREATE TABLE IF NOT EXISTS "ChatReply" ( id TEXT PRIMARY KEY, "guestId" TEXT, text TEXT, "isRead" BOOLEAN DEFAULT FALSE, "createdAt" TIMESTAMP DEFAULT NOW() )');
+          const id = 'reply_' + Date.now();
+          await client.query('INSERT INTO "ChatReply" (id, "guestId", text) VALUES ($1, $2, $3)', [id, guestId, text]);
+          ctx.reply(`✅ Ответ моментально отправлен пользователю ${guestId}!`);
+        } catch (e) {
+          console.error('[ChatReply] Error:', e);
+          ctx.reply('❌ Ошибка при отправке ответа.');
+        } finally {
+          await client.end();
+        }
+        return;
+      }
+    }
+  }
+
   // 1. Проверка мастер-пароля
   if (state?.waitingForMaster) {
     if (text === MASTER_PASSWORD) {
@@ -128,3 +153,50 @@ bot.launch().then(() => console.log('🚀 Telegram Bot started'));
 // Enable graceful stop
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
+
+// -------------------------------------------------------------------
+// Лёгкий HTTP-сервер для отдачи ответов в Next.js без установки 'pg'
+// -------------------------------------------------------------------
+const http = require('http');
+
+const server = http.createServer(async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Content-Type', 'application/json');
+
+  if (req.method === 'GET' && req.url.startsWith('/poll?guestId=')) {
+    const url = new URL(req.url, 'http://localhost');
+    const guestId = url.searchParams.get('guestId');
+    
+    if (!guestId) {
+      res.writeHead(400);
+      return res.end(JSON.stringify({ error: 'guestId required' }));
+    }
+
+    const client = await getDbClient();
+    try {
+      await client.query('CREATE TABLE IF NOT EXISTS "ChatReply" ( id TEXT PRIMARY KEY, "guestId" TEXT, text TEXT, "isRead" BOOLEAN DEFAULT FALSE, "createdAt" TIMESTAMP DEFAULT NOW() )');
+      
+      const result = await client.query('SELECT id, text, "createdAt" FROM "ChatReply" WHERE "guestId" = $1 AND "isRead" = false ORDER BY "createdAt" ASC', [guestId]);
+      const messages = result.rows;
+
+      if (messages.length > 0) {
+        const ids = messages.map(m => m.id);
+        await client.query('UPDATE "ChatReply" SET "isRead" = true WHERE id = ANY($1::text[])', [ids]);
+      }
+
+      res.writeHead(200);
+      res.end(JSON.stringify({ messages }));
+    } catch (e) {
+      console.error('[HTTP] DB Error:', e);
+      res.writeHead(500);
+      res.end(JSON.stringify({ error: 'DB Error' }));
+    } finally {
+      await client.end();
+    }
+  } else {
+    res.writeHead(404);
+    res.end(JSON.stringify({ error: 'Not found' }));
+  }
+});
+
+server.listen(8002, () => console.log('🌐 Local HTTP API started on port 8002'));

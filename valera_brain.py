@@ -10,10 +10,10 @@ app = FastAPI()
 OLLAMA_URL = "http://localhost:11434/api"
 QDRANT_URL = "http://localhost:6333/collections/qoqos-knowledge/points/search"
 EMBED_MODEL = "nomic-embed-text"
-CHAT_MODEL = "llama3.2:3b"
+CHAT_MODEL = "qwen2:1.5b"
 
 class ChatRequest(BaseModel):
-    message: string
+    message: str
 
 def get_brain_answer(question):
     try:
