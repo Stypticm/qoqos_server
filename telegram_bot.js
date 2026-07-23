@@ -15,8 +15,7 @@ const dbConfig = {
   port: 5432,
 };
 
-// Мастер-пароль из скриншота
-const MASTER_PASSWORD = 'GolyanovoRomaMisha';
+const MASTER_PASSWORD = process.env.MASTER_PASSWORD;
 
 // Состояния пользователей (в памяти для простоты, можно в Redis)
 const userStates = new Map();
