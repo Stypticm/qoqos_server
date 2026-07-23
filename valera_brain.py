@@ -2,9 +2,17 @@ import requests
 import json
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Конфигурация
 OLLAMA_URL = "http://localhost:11434/api"
@@ -47,23 +55,38 @@ def get_brain_answer(question):
         if not context.strip():
             context = "Информации в базе знаний не найдено."
 
-        # 3. Формируем финальный ответ через LLM
-        system_prompt = f"""Ты — Валера, экспертный ассистент системы QOQOS. Твоя задача — давать ОЧЕНЬ ТОЧНЫЕ ответы, основываясь ИСКЛЮЧИТЕЛЬНО на предоставленном КОНТЕКСТЕ.
-ПРАВИЛА:
-1. Если в КОНТЕКСТЕ есть стадии или списки, цитируй их точно.
-2. Не придумывай информацию от себя.
-3. Если данных нет — просто ответь: "В моей базе знаний нет информации об этом".
-4. Отвечай на русском языке.
+        if context.strip() == "Информации в базе знаний не найдено.":
+            return "<ESCALATE_REASON>Вопрос не найден в базе знаний</ESCALATE_REASON>"
 
-КОНТЕКСТ:
+        # 3. Формируем финальный ответ через LLM
+        system_prompt = f"""Ты — Валера, помощник сервиса QOQOS по выкупу оборудования. Отвечай на русском языке СТРОГО на основе информации ниже.
+
+ПРАВИЛА:
+- Если в контексте есть информация, ответь на вопрос клиента.
+- Обязательно проверь, не отвечает ли контекст на вопрос про QOQOS, выкуп (trade-in), оценку, устройство, услугу — даже если ответ частичный, дай его.
+- ТОЛЬКО если в контексте нет НИЧЕГО релевантного вопросу, выведи ПЕРВОЙ строкой БЕЗ ЛЮБОГО ДОПОЛНЕНИЯ: <ESCALATE_REASON>Вопрос про ""{question[:60]}"" не найден в базе знаний</ESCALATE_REASON> и затем напиши отдельной строкой, что оператор поможет уточнить. Никогда не изменяй этот тег, не добавляй к нему префиксы, не заключай в кавычки, не заменяй угловые скобки.
+- Если контекст содержит хоть какую-то релевантную информацию — отвечай сразу, без тегов.
+
+ФОРМАТ ДЛЯ ESCALATE:
+<ESCALATE_REASON>Вопрос про "..." не найден в базе знаний</ESCALATE_REASON>
+Оператор поможет уточнить информацию.
+
+ИНФОРМАЦИЯ ДЛЯ ОТВЕТА:
 {context}
 """
 
+        full_prompt = f"{system_prompt}\nВопрос клиента: {question}\nОтвет Валеры:"
+
         res = requests.post(f"{OLLAMA_URL}/generate", json={
             "model": CHAT_MODEL,
-            "prompt": question,
-            "system": system_prompt,
-            "stream": False
+            "prompt": full_prompt,
+            "system": "",
+            "stream": False,
+            "options": {
+                "temperature": 0.3,
+                "num_predict": 300,
+                "stop": ["Вопрос клиента:", "\n\n"]
+            }
         })
         res.raise_for_status()
         return res.json().get("response", "Ошибка генерации")
@@ -77,5 +100,5 @@ async def ask_valera(request: ChatRequest):
     return {"response": answer}
 
 if __name__ == "__main__":
-    print("🚀 Brain Service (Valera) started on port 8001")
+    print("Brain Service (Valera) started on port 8001")
     uvicorn.run(app, host="0.0.0.0", port=8001)

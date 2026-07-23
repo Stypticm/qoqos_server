@@ -199,4 +199,12 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(8002, () => console.log('🌐 Local HTTP API started on port 8002'));
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.log('[HTTP] Port 8002 already in use - skipping HTTP server (bot may already be running)');
+  } else {
+    console.error('[HTTP] Server error:', err);
+  }
+});
+
+server.listen(8002, () => console.log('[HTTP] Local API started on port 8002'));
