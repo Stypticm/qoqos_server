@@ -4,11 +4,13 @@ node_modules/
 # Environment Variables
 .env
 .env.*
+.env.local
 
 # Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+*.log
 
 # Databases, Local Storage and Dumps
 n8n_data/
@@ -23,6 +25,12 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.venv/
+venv/
+
+# Go
+vendor/
+go.sum
 
 # Editor
 .vscode/
@@ -32,9 +40,20 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-# Misc Context
-context.md
+# One-off scripts and temp files
+seed*.sql
+seed*.py
+export_data.*
+add_blog_mocks.*
+check_db_raw.sh
+debug_db.sh
+fix_paths.py
 
-# Agent Rules
-RULES/
-AGENTS.md
+# Debug scripts (run manually, not part of app)
+debug_rag.py
+create_collection.py
+
+# Context and rules (kept in repo for onboarding)
+# context.md
+# AGENTS.md
+# RULES/
