@@ -1,0 +1,12 @@
+- Слои: Controller (валидация), Service (бизнес-логика), Repository (БД), Infrastructure (внешние API).
+- Thin controllers, fat services.
+- Всегда валидируй данные, не доверяй клиенту (fail fast).
+- Явная и централизованная обработка ошибок.
+- Понятные логи без чувствительных данных.
+- Idempotency и transactional integrity для критичных операций.
+- Единые naming conventions, предсказуемый API.
+- Используй Dependency Injection, loose coupling.
+- Используй DTO между слоями, не отдавай модели БД.
+- Избегай N+1 queries. Кэшируй только по необходимости.
+- Проверяй аутентификацию/авторизацию (least privilege).
+- Секреты храни в ENV (не в коде).

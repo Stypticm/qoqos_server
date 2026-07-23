@@ -1,0 +1,10 @@
+- Думай как инженер (SOLID, SRP, OCP, LSP, ISP, DIP).
+- Принципы: KISS, DRY, YAGNI.
+- Composition over Inheritance.
+- High Cohesion, Low Coupling.
+- Readability > cleverness, Maintainability > speed.
+- Пиши self-documenting code (понятные имена, минимум комментариев).
+- Без overengineering, лишних абстракций и дублирования.
+- Выполняй только запрошенную задачу.
+- Не трогай чужой код без необходимости.
+- Правильность -> оптимизация.

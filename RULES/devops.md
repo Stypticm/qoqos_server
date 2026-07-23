@@ -1,0 +1,6 @@
+- Конфигурация отделена от кода (только ENV). Никаких секретов в коде.
+- Observability: logging, monitoring, health checks.
+- Restart-safe, idempotent, reproducible build, predictable deploy.
+- Incremental изменения, обязательный rollback план. Минимальный downtime.
+- Автоматизируй рутину. Production debugging должен быть возможен.
+- Учитывай recovery scenarios (отказоустойчивость).

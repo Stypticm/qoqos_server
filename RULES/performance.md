@@ -1,0 +1,8 @@
+- Сначала correctness, потом performance. Никаких преждевременных оптимизаций.
+- Сначала измеряй, потом чини реальные bottlenecks.
+- Избегай лишних вычислений, re-renders, allocations.
+- Минимизируй запросы к API/БД (lazy loading, загружай только нужное).
+- Caching только по необходимости, обязательная стратегия invalidation.
+- Оптимизируй hot paths, игнорируй cold paths.
+- Контролируй memory leaks, query/network/rendering performance.
+- Пиши масштабируемый код.
