@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"gorm.io/datatypes"
+	"gorm.io/gorm"
 	"github.com/lib/pq"
 )
 
@@ -489,6 +490,8 @@ type RepairRequest struct {
 	CourierId        *string        `gorm:"column:courierId" json:"courierId"`
 	CourierNotes     *string        `gorm:"column:courierNotes" json:"courierNotes"`
 	CustomerNotes    *string        `gorm:"column:customerNotes" json:"customerNotes"`
+	PartName         *string        `gorm:"column:partName" json:"partName"`
+	PartModel        *string        `gorm:"column:partModel" json:"partModel"`
 	CreatedAt        time.Time      `gorm:"column:createdAt" json:"createdAt"`
 	UpdatedAt        time.Time      `gorm:"column:updatedAt" json:"updatedAt"`
 
@@ -499,6 +502,48 @@ type RepairRequest struct {
 
 func (RepairRequest) TableName() string {
 	return "RepairRequest"
+}
+
+func (r *RepairRequest) AfterUpdate(tx *gorm.DB) error {
+	if r.PartName == nil || r.PartModel == nil {
+		return nil
+	}
+
+	if !tx.Statement.Changed("status") {
+		return nil
+	}
+
+	var old RepairRequest
+	if err := tx.First(&old, "id = ?", r.ID).Error; err != nil {
+		return err
+	}
+
+	switch r.Status {
+	case RepairRepairing:
+		if old.Status != RepairRepairing {
+			return tx.Create(&StockMovement{
+				PartName:    *r.PartName,
+				PartModel:   *r.PartModel,
+				Delta:       -1,
+				Reason:      "repair_completed",
+				ReferenceId: &r.ID,
+				CreatedAt:   time.Now(),
+			}).Error
+		}
+	case RepairReadyForPickup, RepairDelivered, RepairCompleted:
+		if old.Status != RepairReadyForPickup && old.Status != RepairDelivered && old.Status != RepairCompleted {
+			return tx.Create(&StockMovement{
+				PartName:    *r.PartName,
+				PartModel:   *r.PartModel,
+				Delta:       1,
+				Reason:      "repair_returned",
+				ReferenceId: &r.ID,
+				CreatedAt:   time.Now(),
+			}).Error
+		}
+	}
+
+	return nil
 }
 
 type AgentAuditLog struct {

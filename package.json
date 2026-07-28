@@ -6,7 +6,7 @@
     "export": "node export_data.js",
     "start": "node telegram_bot.js",
     "valera": "python ./valera_brain.py",
-    "dev": "concurrently \"node telegram_bot.js\" \"python ./valera_brain.py\""
+    "dev": "concurrently \"docker-compose up -d\" \"node telegram_bot.js\" \"python ./valera_brain.py\""
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

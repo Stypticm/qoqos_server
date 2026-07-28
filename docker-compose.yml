@@ -33,39 +33,6 @@ services:
       timeout: 5s
       retries: 5
 
-  n8n:
-    image: n8nio/n8n:latest
-    container_name: qoqos_n8n
-    restart: unless-stopped
-    ports:
-      - '5678:5678'
-    env_file: .env
-    environment:
-      - DB_TYPE=postgresdb
-      - DB_POSTGRESDB_HOST=postgres
-      - DB_POSTGRESDB_PORT=5432
-      - DB_POSTGRESDB_DATABASE=${DB_NAME:-qoqos}
-      - DB_POSTGRESDB_USER=${DB_USER:-postgres}
-      - DB_POSTGRESDB_PASSWORD=${DB_PASSWORD:-postgres}
-      - QUEUE_BULL_REDIS_HOST=redis
-      - QUEUE_BULL_REDIS_PORT=6379
-      - N8N_HOST=${N8N_HOST}
-      - N8N_PORT=5678
-      - N8N_PROTOCOL=http
-      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
-      - WEBHOOK_URL=${WEBHOOK_URL}
-      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
-      - N8N_COMMUNITY_PACKAGES_ENABLED=true
-    volumes:
-      - ./n8n_data:/home/node/.n8n
-      - ./storage:/home/node/storage
-      - ./QOQOS_KNOWLEDGE:/home/node/.n8n-files
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
   api:
     build:
       context: ./api-service
@@ -101,7 +68,6 @@ services:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
     depends_on:
       - api
-      - n8n
 
   qdrant:
     image: qdrant/qdrant
@@ -121,6 +87,40 @@ services:
       - "11434:11434"
     volumes:
       - ./ollama_models:/root/.ollama
+
+  ai-agent:
+    build:
+      context: ./ai-agent
+      dockerfile: Dockerfile
+    container_name: qoqos_ai_agent
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+      - ../ai_agent_touch/.env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_NAME: ${DB_NAME:-qoqos}
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: 6333
+      OLLAMA_URL: http://ollama:11434/api/generate
+      OLLAMA_EMBEDDING_URL: http://ollama:11434/api/embeddings
+      OLLAMA_MODEL: qwen2:1.5b
+      EMBEDDING_MODEL: nomic-embed-text
+    volumes:
+      - ../ai_agent_touch:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+      ollama:
+        condition: service_started
+    command: uvicorn main:app --host 0.0.0.0 --port 8001
 
 volumes:
   postgres_data:

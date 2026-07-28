@@ -256,6 +256,8 @@ func RegisterRoutes(r chi.Router) {
 		r.Get("/distinct/{field}", h.Distinct)
 	})
 
+	SetupStockRoutes(r)
+
 	// Auth endpoints
 	r.Post("/users/login", HandleLogin)
 	r.Post("/users/register", HandleRegister)

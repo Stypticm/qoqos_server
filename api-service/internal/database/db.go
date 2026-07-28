@@ -67,6 +67,7 @@ func InitDB(cfg *config.Config) {
 		&models.BotAccess{},
 		&models.AgentAuditLog{},
 		&models.IdempotencyKey{},
+		&models.StockMovement{},
 	)
 	if err != nil {
 		log.Printf("Failed to auto-migrate: %v", err)
