@@ -42,27 +42,38 @@ bot.on('text', async (ctx) => {
 
   // 0. Обработка Reply-сообщений для чата на сайте
   if (ctx.message.reply_to_message) {
-    const originalText = ctx.message.reply_to_message.text;
-    if (originalText && originalText.includes('Новый вопрос в чате от пользователя')) {
-      const match = originalText.match(/от пользователя (guest_[a-zA-Z0-9]+)/);
+    const replyTo = ctx.message.reply_to_message;
+    const originalText = (replyTo.text || replyTo.caption || '').trim();
+
+    if (originalText.includes('Новый вопрос в чате от пользователя')) {
+      const match = originalText.match(/от пользователя (\S+)/);
       if (match && match[1]) {
         const guestId = match[1];
+        console.log('[ChatReply] Reply detected for guestId:', guestId, 'chatId:', chatId, 'replyToMessageId:', replyTo.message_id);
         const client = await getDbClient();
         try {
-          // Создадим табличку, если ее еще нет
           await client.query('CREATE TABLE IF NOT EXISTS "ChatReply" ( id TEXT PRIMARY KEY, "guestId" TEXT, text TEXT, "isRead" BOOLEAN DEFAULT FALSE, "createdAt" TIMESTAMP DEFAULT NOW() )');
           const id = 'reply_' + Date.now();
           await client.query('INSERT INTO "ChatReply" (id, "guestId", text) VALUES ($1, $2, $3)', [id, guestId, text]);
-          ctx.reply(`✅ Ответ моментально отправлен пользователю ${guestId}!`);
+          try {
+            await ctx.reply(`✅ Ответ моментально отправлен пользователю ${guestId}!`);
+          } catch (replyError) {
+            console.error('[ChatReply] Failed to reply to admin:', replyError);
+          }
         } catch (e) {
           console.error('[ChatReply] Error:', e);
-          ctx.reply('❌ Ошибка при отправке ответа.');
+          try {
+            await ctx.reply('❌ Ошибка при отправке ответа.');
+          } catch (replyError) {
+            console.error('[ChatReply] Failed to reply error to admin:', replyError);
+          }
         } finally {
           await client.end();
         }
         return;
       }
     }
+    console.log('[ChatReply] Ignoring reply - wrong target message. Reply text:', originalText.substring(0, 100));
   }
 
   // 1. Проверка мастер-пароля

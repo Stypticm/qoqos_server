@@ -98,7 +98,6 @@ services:
       - "8001:8001"
     env_file:
       - .env
-      - ../ai_agent_touch/.env
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
@@ -112,7 +111,7 @@ services:
       OLLAMA_MODEL: qwen2:1.5b
       EMBEDDING_MODEL: nomic-embed-text
     volumes:
-      - ../ai_agent_touch:/app
+      - ./ai-agent:/app
     depends_on:
       postgres:
         condition: service_healthy
