@@ -5,6 +5,7 @@ import re
 from qdrant_client import QdrantClient
 import httpx
 import pymorphy3
+from pathlib import Path
 
 # === КОНФИГУРАЦИЯ ===
 DB_HOST = os.getenv("DB_HOST", "localhost")
@@ -22,6 +23,8 @@ OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
 OLLAMA_EMBEDDING_URL = os.getenv("OLLAMA_EMBEDDING_URL", "http://localhost:11434/api/embeddings")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "deepseek-r1:8b")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
+
+PROMPT_PATH = Path(__file__).parent / "prompts" / "repair_agent_prompt.txt"
 
 # === КЛИЕНТЫ ===
 qdrant = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
@@ -42,6 +45,9 @@ PART_ALIASES = {
     "разъем": "разъем зарядки",
     "гнездо": "разъем зарядки",
 }
+
+def load_prompt_template() -> str:
+    return PROMPT_PATH.read_text(encoding="utf-8")
 
 def normalize_part_name(user_part: str) -> str:
     user_part_lower = user_part.lower().strip()
@@ -94,16 +100,18 @@ async def check_stock(part_name: str, model: str):
         print(f"Ошибка check_stock: {e}")
         return {"in_stock": False, "delivery_days": None}
 
-async def search_defects(query: str, top_k: int = 3):
+async def search_defects(query: str, top_k: int = 8):
     try:
         embedding = await get_embedding(query)
         if not embedding:
             return []
+        print("AGENT EMB dim:", len(embedding), "head:", embedding[:3])   # <-- добавьте
         results = qdrant.query_points(
             collection_name=QDRANT_COLLECTION,
             query=embedding,
             limit=top_k,
         )
+        print("AGENT TOP:", [(round(h.score, 3), h.payload.get("text")) for h in results.points])  # <-- добавьте
         return [{
             "text": hit.payload["text"],
             "part": hit.payload.get("part"),
@@ -123,7 +131,7 @@ async def call_ollama(prompt: str) -> str:
                     "model": OLLAMA_MODEL,
                     "prompt": prompt,
                     "stream": False,
-                    "temperature": 0.3,
+                    "temperature": 0.1,
                 },
                 timeout=60.0,
             )
@@ -141,33 +149,8 @@ async def process_query(user_query: str) -> str:
         else:
             context_text = "\n".join([f"- {d['text']}" for d in similar_defects])
 
-        prompt = f"""
-Ты — AI-агент сервиса по ремонту телефонов.
-
-Вот примеры правильных ответов:
-
-Пример 1:
-Вопрос пользователя: "Сколько стоит замена экран на iPhone 14?"
-Правильный JSON: {{"part_name": "экран", "model": "iPhone 14", "message": ""}}
-
-Пример 2:
-Вопрос пользователя: "У меня сломался экран на айфоне 14, сколько?"
-Правильный JSON: {{"part_name": "экран", "model": "iPhone 14", "message": ""}}
-
-Пример 3:
-Вопрос пользователя: "Замена кнопку громкости на самсунг а52"
-Правильный JSON: {{"part_name": "кнопка громкости", "model": "Samsung A52", "message": ""}}
-
-Пример 4:
-Вопрос пользователя: "Телефон быстро разряжается, нужна замена аккумулятора"
-Правильный JSON: {{"part_name": "аккумулятор", "model": "неизвестно", "message": "Уточните модель телефона"}}
-
-Теперь твоя очередь. Ответь на вопрос пользователя строго в формате JSON, как в примерах выше.
-Не используй лишние слова, только JSON.
-
-Вопрос пользователя: "{user_query}"
-Ответ:
-"""
+        temaplate = load_prompt_template()
+        prompt = temaplate.replace("{{CONTEXT}}", context_text).replace("{{QUESTION}}", user_query)
 
         response = await call_ollama(prompt)
         print("Ollama ответил:", response)
@@ -183,6 +166,9 @@ async def process_query(user_query: str) -> str:
         clean_response = re.sub(r'(?<!")(\bmodel\b)(?!")(\s*:)', r'"\1"\2', clean_response)
         clean_response = re.sub(r'(?<!")(\bpart_name\b)(?!")(\s*:)', r'"\1"\2', clean_response)
 
+        m = re.search(r'\{.*\}', clean_response, re.DOTALL)
+        if m:
+            clean_response = m.group(0)
         try:
             data = json.loads(clean_response)
         except json.JSONDecodeError as e:
@@ -190,12 +176,13 @@ async def process_query(user_query: str) -> str:
             print(f"Строка: {clean_response}")
             return "Извините, не удалось обработать запрос. Попробуйте уточнить: 'Экран iPhone 14'."
 
-        if data.get("message"):
-            return data["message"]
 
         part = data.get("part_name")
         model = data.get("model")
 
+        if data.get("message") and (not part or not model or part == "null" or model == "null"):
+            return data["message"]
+        
         if not part or not model or part == "null" or model == "null":
             return "Уточните, пожалуйста, модель телефона и что именно сломалось (экран, кнопка, аккумулятор)."
 

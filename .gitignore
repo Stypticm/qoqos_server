@@ -50,7 +50,7 @@ debug_db.sh
 fix_paths.py
 
 # Knowledge base sources (do not commit raw docs)
-QOQOS_KNOWLEDGE/
+# QOQOS_KNOWLEDGE/
 
 # Debug scripts (run manually, not part of app)
 debug_rag.py
@@ -61,3 +61,5 @@ create_collection.py
 AGENTS.md
 RULES
 ARCHITECTURE.md
+
+.gitattributes

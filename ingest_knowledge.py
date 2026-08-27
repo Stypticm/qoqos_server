@@ -185,8 +185,8 @@ def generate_load_qdrant(defects: List[Dict]) -> str:
     ]
 
     for item in defects:
-        part_json = json.dumps(item["part"], ensure_ascii=False)
-        model_json = json.dumps(item["model"], ensure_ascii=False)
+        part_json = "None" if item["part"] is None else json.dumps(item["part"], ensure_ascii=False)
+        model_json = "None" if item["model"] is None else json.dumps(item["model"], ensure_ascii=False)
         lines.append(f'    {{"text": {json.dumps(item["text"], ensure_ascii=False)}, "part": {part_json}, "model": {model_json}}},')
 
     lines.extend([

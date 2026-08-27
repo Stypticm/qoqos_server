@@ -14,21 +14,21 @@ qdrant = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
 
 defects_data = [
     {"text": "Треснул экран iPhone 14, требуется замена дисплея", "part": "экран", "model": "Iphone 14"},
-    {"text": "Желтизна экрана после падения, нужна замена матрицы", "part": "экран", "model": null},
-    {"text": "Пожелтение экрана от времени, естественный износ", "part": "экран", "model": null},
-    {"text": "Заводской брак дисплея на iPhone 14, ремонт по гарантии", "part": null, "model": "Iphone 14"},
+    {"text": "Желтизна экрана после падения, нужна замена матрицы", "part": "экран", "model": None},
+    {"text": "Пожелтение экрана от времени, естественный износ", "part": "экран", "model": None},
+    {"text": "Заводской брак дисплея на iPhone 14, ремонт по гарантии", "part": None, "model": "Iphone 14"},
     {"text": "Не работает кнопка громкости на Samsung A52", "part": "кнопка громкости", "model": "Samsung A52"},
     {"text": "Телефон быстро разряжается, нужна замена аккумулятора iPhone 14", "part": "аккумулятор", "model": "Iphone 14"},
-    {"text": "Как работает выкуп (Trade-in) в QOQOS", "part": null, "model": null},
+    {"text": "Как работает выкуп (Trade-in) в QOQOS", "part": None, "model": None},
     {"text": "Сколько стоит замена экрана на iPhone 14", "part": "экран", "model": "Iphone 14"},
-    {"text": "Нужна замена аккумулятора на Samsung", "part": "аккумулятор", "model": null},
-    {"text": "Не работает разъем зарядки на iPhone", "part": "разъем зарядки", "model": null},
-    {"text": "Как долго длится ремонт экрана", "part": "экран", "model": null},
-    {"text": "Есть ли гарантия на ремонт", "part": null, "model": null},
-    {"text": "Можно ли сдать телефон с разбитым экраном", "part": "экран", "model": null},
-    {"text": "Сколько времени занимает диагностика", "part": null, "model": null},
-    {"text": "Принимаете ли вы технику с дефектами", "part": null, "model": null},
-    {"text": "Нужна ли предварительная запись на ремонт", "part": null, "model": null},
+    {"text": "Нужна замена аккумулятора на Samsung", "part": "аккумулятор", "model": None},
+    {"text": "Не работает разъем зарядки на iPhone", "part": "разъем зарядки", "model": None},
+    {"text": "Как долго длится ремонт экрана", "part": "экран", "model": None},
+    {"text": "Есть ли гарантия на ремонт — Да, на все виды ремонта мы предоставляем гарантию 6 месяцев.", "part": None, "model": None},
+    {"text": "Можно ли сдать телефон с разбитым экраном", "part": "экран", "model": None},
+    {"text": "Сколько времени занимает диагностика", "part": None, "model": None},
+    {"text": "Принимаете ли вы технику с дефектами", "part": None, "model": None},
+    {"text": "Нужна ли предварительная запись на ремонт", "part": None, "model": None},
 ]
 
 async def get_embedding(text: str) -> list[float]:
