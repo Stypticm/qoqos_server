@@ -108,7 +108,7 @@ services:
       QDRANT_PORT: 6333
       OLLAMA_URL: http://ollama:11434/api/generate
       OLLAMA_EMBEDDING_URL: http://ollama:11434/api/embeddings
-      OLLAMA_MODEL: qwen2:1.5b
+      OLLAMA_MODEL: qwen2.5:3b
       EMBEDDING_MODEL: nomic-embed-text
     volumes:
       - ./ai-agent:/app
